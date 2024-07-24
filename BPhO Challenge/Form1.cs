@@ -1,3 +1,4 @@
+using BPhO_Challenge.Plots;
 using Core;
 namespace BPhO_Challenge
 {
@@ -30,17 +31,85 @@ namespace BPhO_Challenge
             //selectorList1.Show();
 
             //selectorList1.ValueChanged += (s, e) => { MessageBox.Show(e.ToString()); };
-            simplePlot1.taskFiveSetup();
+            tabControl1.Controls.Clear();
+            tabControl1.TabPages.Clear();
         }
 
-        private void selectorList1_Load(object sender, EventArgs e)
+        private void AddControlToNewTab(Control c, bool show = true)
         {
-
+            TabPage newPage = new TabPage(c.Name);
+            tabControl1.TabPages.Insert(0, newPage);
+            newPage.Controls.Add(c);
+            c.Show();
+            //ControlPageMap.Add(c, newPage);
+            if (show)
+            {
+                tabControl1.SelectedTab = newPage;
+            }
         }
 
-        private void simplePlot1_Load(object sender, EventArgs e)
-        {
 
+        private void button1_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.TaskOneSetup();
+            AddControlToNewTab(c1, true);
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.taskTwoSetup();
+            AddControlToNewTab(c1, true);
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.taskThreeSetup();
+            AddControlToNewTab(c1, true);
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.taskFourSetup();
+            AddControlToNewTab(c1, true);
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.taskFiveSetup();
+            AddControlToNewTab(c1, true);
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.taskSixSetup();
+            AddControlToNewTab(c1, true);
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.taskSevenSetup();
+            AddControlToNewTab(c1, true);
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.taskEightSetup();
+            AddControlToNewTab(c1, true);
+        }
+
+        private void button9_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.taskNineSetup();
+            AddControlToNewTab(c1, true);
         }
     }
 }

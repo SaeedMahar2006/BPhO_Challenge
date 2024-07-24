@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35013.160
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BPhO Challenge", "BPhO Challenge\BPhO Challenge.csproj", "{7DE921E3-795E-4D87-8ADD-169F18FA436F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BPhO Challenge", "BPhO Challenge\BPhO Challenge.csproj", "{7DE921E3-795E-4D87-8ADD-169F18FA436F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{57409A30-CAED-43E3-82EE-A4F14888A864}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "Core\Core.csproj", "{57409A30-CAED-43E3-82EE-A4F14888A864}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{424EA19B-625D-46F3-8845-098E0FB39A6C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{57409A30-CAED-43E3-82EE-A4F14888A864}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57409A30-CAED-43E3-82EE-A4F14888A864}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57409A30-CAED-43E3-82EE-A4F14888A864}.Release|Any CPU.Build.0 = Release|Any CPU
+		{424EA19B-625D-46F3-8845-098E0FB39A6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{424EA19B-625D-46F3-8845-098E0FB39A6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{424EA19B-625D-46F3-8845-098E0FB39A6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{424EA19B-625D-46F3-8845-098E0FB39A6C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
