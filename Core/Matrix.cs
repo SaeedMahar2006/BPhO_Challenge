@@ -20,15 +20,15 @@ namespace Core
             _m = m;
             matrix = new double[n, m];
         }
-        public double this[int x, int y]
+        public double this[int row, int col]
         {
             get
             {
-                return this.matrix[x, y];
+                return this.matrix[row, col];
             }
             set
             {
-                this.matrix[x, y] = value;
+                this.matrix[row, col] = value;
             }
         }
 
@@ -88,8 +88,8 @@ namespace Core
         {
             var m = new Matrix(3, 3);
             m.matrix[0, 0]=Math.Cos(theta); m.matrix[0,1]= -Math.Sin(theta); m.matrix[0, 2]=0;
-            m.matrix[1, 0]=Math.Sin(theta); m.matrix[1,1]= Math.Cos(theta); m.matrix[1, 2]=0;
-            m.matrix[2, 0]= 0; m.matrix[2,1]= 0; m.matrix[2, 2]=1;
+            m.matrix[1, 0]=Math.Sin(theta); m.matrix[1,1]= Math.Cos(theta);  m.matrix[1, 2]=0;
+            m.matrix[2, 0]= 0;              m.matrix[2,1]= 0;                m.matrix[2, 2]=1;
 
             return m;
         }
@@ -97,9 +97,9 @@ namespace Core
         public static Matrix RotationX(double theta)
         {
             var m = new Matrix(3, 3);
-            m.matrix[0, 0] = 1; m.matrix[0, 1] = 0; m.matrix[0, 2] = 0;
-            m.matrix[1, 0] = 0; m.matrix[1, 1] = Math.Cos(theta); m.matrix[1, 2] = Math.Sin(theta);
-            m.matrix[2, 0] = 0; m.matrix[2, 1] =-Math.Sin(theta); m.matrix[2, 2] = Math.Cos(theta);
+            m.matrix[0, 0] = 1; m.matrix[0, 1] = 0;               m.matrix[0, 2] = 0;
+            m.matrix[1, 0] = 0; m.matrix[1, 1] = Math.Cos(theta); m.matrix[1, 2] = -Math.Sin(theta);
+            m.matrix[2, 0] = 0; m.matrix[2, 1] = Math.Sin(theta); m.matrix[2, 2] = Math.Cos(theta);
 
             return m;
         }

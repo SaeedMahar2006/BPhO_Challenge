@@ -330,11 +330,11 @@ namespace Core
         }
         public static double AltitudeFromCoordinatesWGS84(Vector coord)
         {
-            return ECEFVectorToGeoditicAndHeightNewtonRaphson(coord).Item2;
+            return ECEFVectorToGeoditicAndHeightZhu(coord).Item2;
         }
         public static Vector AccelerationDueToGrav(Vector Position)
         {
-            return Position * massEarth * gravConstant / (Math.Pow(Position*Position,1.5));
+            return -1*Position * massEarth * gravConstant / (Math.Pow(Position*Position,1.5));
         }
         public static Vector ProjectOntoSurfaceOfEarthVector(Vector Position)
         {
@@ -411,9 +411,9 @@ namespace Core
             double t = sqrt( sqrt(sqr(beta)-k)  -  (beta+i)/2 )
                 -sign(m-n)*sqrt((beta-i)/2);
             double w1 = w / (t + l);
-            double z1 = (q-WGS84_e2)*ECEF[2]/(t-l);
+            double z1 = (1-WGS84_e2)*ECEF[2]/(t-l);//fixx
 
-            double lat = atan(z1/((1-WGS84_e2)*w1));   //MAYBE atan2
+            double lat = atan(z1/ ((1-WGS84_e2)*w1));   //MAYBE atan2
             double longi =2 * atan((w - ECEF[0]) / ECEF[1]);
             double h = sign(t-1+l)*sqrt(sqr(w-w1)   + sqr(ECEF[2] -z1));
 
@@ -441,7 +441,7 @@ namespace Core
             double h = p / cs - N;
             while (Math.Abs(h - h_old) > 1.0e-12) {
                 h_old = h;
-                theta = Math.Atan2(z, p * (1.0 - Math.Pow(e, 2.0) * N / (N + h)));
+                theta = Math.Atan2(z, (p * (1.0 - Math.Pow(e, 2.0) * N / (N + h))) ); //change back to just atan
                 cs = Math.Cos(theta);
                 sn = Math.Sin(theta);
                 N = Math.Pow(WGS84_a, 2.0) / Math.Sqrt(Math.Pow(WGS84_a * cs, 2.0) + Math.Pow(WGS84_b * sn, 2.0));
@@ -464,29 +464,151 @@ namespace Core
             return v2-v;
         }
 
-
-        public static Vector ENUToECEF(Vector ENU, Coordinate Geoditic)
+        /// <summary>
+        /// credit to https://gist.github.com/govert/1b373696c9a27ff4c72a
+        /// </summary>
+        /// <param name="ENU"></param>
+        /// <param name="Geoditic"></param>
+        /// <returns></returns>
+        public static Vector ENUToECEF_Position(Vector ENU, Coordinate Geoditic, double height)
         {
-            double lam = Geoditic.Longitude.ToDouble();
-            double phi = Geoditic.Latitude.ToDouble();
-            var matForEnuToEcef = Matrix.RotationZ(-(Math.PI + lam)) * Matrix.RotationX(-(Math.PI - phi));
-            return matForEnuToEcef* ENU;
+            //double lam = Geoditic.Longitude.ToDouble()/RadToDeg;
+            //double phi = Geoditic.Latitude.ToDouble()/RadToDeg;
+            //var matForEnuToEcef = Matrix.RotationZ(-(Math.PI/2 + lam)) * Matrix.RotationX(-(Math.PI/2 - phi));
+            //return matForEnuToEcef* ENU;
+
+            double lat0 = Geoditic.Latitude.ToDouble();
+            double lon0 = Geoditic.Longitude.ToDouble();
+            double h0 = height;
+
+            double x = ENU[0];
+            double y = ENU[1];
+            double z = ENU[2];
+
+            var lambda = lat0/RadToDeg;
+            var phi = lon0/RadToDeg;
+            var s = Math.Sin(lambda);
+            var N = WGS84_a / Math.Sqrt(1 - WGS84_e2 * s * s);
+
+            var sin_lambda = Math.Sin(lambda);
+            var cos_lambda = Math.Cos(lambda);
+            var cos_phi = Math.Cos(phi);
+            var sin_phi = Math.Sin(phi);
+
+            double x0 = (h0 + N) * cos_lambda * cos_phi;
+            double y0 = (h0 + N) * cos_lambda * sin_phi;
+            double z0 = (h0 + (1 - WGS84_e2) * N) * sin_lambda;
+
+            double xd, yd, zd;
+            xd = x - x0;
+            yd = y - y0;
+            zd = z - z0;
+
+            Vector ret = new Vector(3);
+
+            // This is the matrix multiplication
+            ret[0] = -sin_phi * xd + cos_phi * yd;
+            ret[1] = -cos_phi * sin_lambda * xd - sin_lambda * sin_phi * yd + cos_lambda * zd;
+            ret[2] = cos_lambda * cos_phi * xd + cos_lambda * sin_phi * yd + sin_lambda * zd;
+
+            return ret;
         }
 
-        public static Vector ECEFtoENU(Vector ECEF, Coordinate? Geoditic=null)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ENU"></param>
+        /// <param name="Geoditic"></param>
+        /// <param name="height"></param>
+        /// <returns></returns>
+        public static Vector ENUToECEF_Velocity(Vector ENU, Coordinate Geoditic, double height)
+        {//TODO
+            //double lam = Geoditic.Longitude.ToDouble()/RadToDeg;
+            //double phi = Geoditic.Latitude.ToDouble()/RadToDeg;
+            //var matForEnuToEcef = Matrix.RotationZ(-(Math.PI/2 + lam)) * Matrix.RotationX(-(Math.PI/2 - phi));
+            //return matForEnuToEcef* ENU;
+
+            var translate = GeoditicToECEFVector(Geoditic, height);
+            var ECEF=ENUToECEF_Position(ENU, Geoditic, height);
+            return ECEF;//TODO, what here
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ECEF"></param>
+        /// <param name="Geoditic"></param>
+        /// <param name="height"></param>
+        /// <returns></returns>
+        public static Vector ECEFtoENU_Velocity(Vector ECEF, Coordinate Geoditic, double height)
         {
-            if (Geoditic!=null) {
-                double lam = Geoditic.Longitude.ToDouble();
-                double phi = Geoditic.Latitude.ToDouble();
-                var matForEnuToEcef = (Matrix.RotationZ(-(Math.PI + lam)) * Matrix.RotationX(-(Math.PI - phi))).Transpose();
-                return matForEnuToEcef * ECEF;
-            } else {
-                Geoditic = ECEFVectorToGeoditicAndHeightNewtonRaphson(ECEF).Item1;
-                double lam = Geoditic.Longitude.ToDouble();
-                double phi = Geoditic.Latitude.ToDouble();
-                var matForEnuToEcef = (Matrix.RotationZ(-(Math.PI + lam)) * Matrix.RotationX(-(Math.PI - phi))).Transpose();
-                return matForEnuToEcef * ECEF;
-            }
+            //if (Geoditic!=null) {
+            //    double lam = Geoditic.Longitude.ToDouble()/RadToDeg;
+            //    double phi = Geoditic.Latitude.ToDouble()/RadToDeg;
+            //    var matForEnuToEcef = Matrix.RotationX((Math.PI / 2 - phi)) * (Matrix.RotationZ((Math.PI/2 + lam)) );
+            //    return matForEnuToEcef * ECEF;
+            //} else {
+            //    Geoditic = ECEFVectorToGeoditicAndHeightZhu(ECEF).Item1;
+            //    double lam = Geoditic.Longitude.ToDouble() / RadToDeg;
+            //    double phi = Geoditic.Latitude.ToDouble() / RadToDeg;
+            //    var matForEnuToEcef = Matrix.RotationX((Math.PI / 2 - phi))*(Matrix.RotationZ((Math.PI/2 + lam)) );
+            //    return matForEnuToEcef * ECEF;
+            //}
+            var translate=GeoditicToECEFVector(Geoditic,height);
+            ECEF += translate;
+            return ECEFtoENU_Position(ECEF,Geoditic,height);
+        }
+
+
+
+        /// <summary>
+        /// credit to https://gist.github.com/govert/1b373696c9a27ff4c72a
+        /// </summary>
+        /// <param name="ECEF"></param>
+        /// <param name="Geoditic"></param>
+        /// <param name="height"></param>
+        /// <returns></returns>
+        public static Vector ECEFtoENU_Position(Vector ECEF, Coordinate Geoditic, double height)
+        {
+            // Converts the Earth-Centered Earth-Fixed (ECEF) coordinates (x, y, z) to 
+            // East-North-Up coordinates in a Local Tangent Plane that is centered at the 
+            // (WGS-84) Geodetic point (lat0, lon0, h0).
+            //double x, double y, double z,
+            //double lat0, double lon0, double h0,
+            //out double xEast, out double yNorth, out double zUp
+            double x = ECEF[0];
+            double y = ECEF[1];
+            double z = ECEF[2];
+
+            double lat0 = Geoditic.Latitude.ToDouble();
+            double lon0 = Geoditic.Longitude.ToDouble();
+            double h0 = height;
+                // Convert to radians in notation consistent with the paper:
+                var lambda = lat0/RadToDeg;
+                var phi = lon0/RadToDeg;
+                var s = Math.Sin(lambda);
+                var N = WGS84_a / Math.Sqrt(1 - WGS84_e2 * s * s);
+
+                var sin_lambda = Math.Sin(lambda);
+                var cos_lambda = Math.Cos(lambda);
+                var cos_phi = Math.Cos(phi);
+                var sin_phi = Math.Sin(phi);
+
+                double x0 = (h0 + N) * cos_lambda * cos_phi;
+                double y0 = (h0 + N) * cos_lambda * sin_phi;
+                double z0 = (h0 + (1 - WGS84_e2) * N) * sin_lambda;
+
+                double xd, yd, zd;
+                xd = x - x0;
+                yd = y - y0;
+                zd = z - z0;
+                
+                Vector ret = new Vector(3);
+            // This is the matrix multiplication
+            ret[0] = -sin_phi * xd + cos_phi * yd;
+                ret[1] = -cos_phi * sin_lambda * xd - sin_lambda * sin_phi * yd + cos_lambda * zd;
+            ret[2] = cos_lambda * cos_phi * xd + cos_lambda * sin_phi * yd + sin_lambda * zd;
+            return ret;
         }
 
         public static Vector AzimuthElevationtoENU(double Azimuth, double Elevation)
@@ -523,7 +645,7 @@ namespace Core
             double lam = Start.Longitude.ToDouble();
             double phi = Start.Latitude.ToDouble();
 
-            Vector ECEF_ThrowVelocity = ENUToECEF(ENU_Vel,Start);
+            Vector ECEF_ThrowVelocity = ENUToECEF_Velocity(ENU_Vel,Start, LaunchHeight);
 
             Vector EarthSpinVelStart = VelocityOfEarthSurfaceFromCoordinate(Start, TimeIncrement);
 
@@ -536,47 +658,53 @@ namespace Core
             v = ECI_Start_Velocity;
             double t = 0;
             yield return Start;
-            double curHeight = ECEFVectorToGeoditicAndHeightNewtonRaphson(curPos).Item2;
+            double curHeight = ECEFVectorToGeoditicAndHeightZhu(curPos).Item2;
 
             var earthRotationMatrix = Matrix.RotationZ(-Math.Tau*TimeIncrement/secondsPerRotation);//needs be clockwise around z
 
             while (curHeight >= 0)
             {
                 var tempsss = AccelerationDueToGrav(curPos);
-                var temposss = DragForceMagnitude(curHeight, v.Magnitude(), CoeffDrag, CrossSectionArea) * v / v.Magnitude();
+                var temposss =-1* DragForceMagnitude(curHeight, v.Magnitude(), CoeffDrag, CrossSectionArea) * v / v.Magnitude();
+                
                 a =  tempsss+temposss;
 
-                var posDebug = ECEFVectorToGeoditicAndHeightNewtonRaphson(curPos);
-                var velDebug = ECEFtoENU(v,posDebug.Item1);
-                var accDebug = ECEFtoENU(a,posDebug.Item1);
+                var posDebug = ECEFVectorToGeoditicAndHeightZhu(curPos);
 
-                //curPos = curPos + v * TimeIncrement + 0.5 * (a) * TimeIncrement * TimeIncrement;
+                var dbg1 = ECEFtoENU_Velocity(tempsss, posDebug.Item1, posDebug.Item2);
+                var dbg2 = ECEFtoENU_Velocity(temposss, posDebug.Item1,posDebug.Item2);
+
+                var velDebug = ECEFtoENU_Velocity(v,posDebug.Item1, posDebug.Item2);
+                var accDebug = ECEFtoENU_Velocity(a,posDebug.Item1, posDebug.Item2);
+
+                curPos = curPos + v * TimeIncrement + 0.5 * (a) * TimeIncrement * TimeIncrement;
                 //lets work in ENU
-                var curPosChange = velDebug * TimeIncrement + 0.5 * (accDebug) * TimeIncrement * TimeIncrement;
-                curPosChange=ENUToECEF( curPosChange , posDebug.Item1);
-                curPos += curPosChange;
+                //var curPosChange = velDebug * TimeIncrement + 0.5 * (accDebug) * TimeIncrement * TimeIncrement;
+                //curPosChange=ENUToECEF( curPosChange , posDebug.Item1);
+                //curPos += curPosChange;
 
 
                 v = v + (a) * TimeIncrement;
-                velDebug = ECEFtoENU(v, posDebug.Item1);
+                velDebug = ECEFtoENU_Velocity(v, posDebug.Item1, posDebug.Item2);
 
-                var tempss = ECEFVectorToGeoditicAndHeightNewtonRaphson(curPos); //become neg here
+                var tempss = ECEFVectorToGeoditicAndHeightZhu(curPos); //become neg here
                 curPos = earthRotationMatrix*curPos;
                 
                 v = earthRotationMatrix * v;
                 t += TimeIncrement;
 
-                var temps = ECEFVectorToGeoditicAndHeightNewtonRaphson(curPos);
+                var temps = ECEFVectorToGeoditicAndHeightZhu(curPos);
                 curHeight = temps.Item2;
 
-                var debug = ECEFtoENU(v,temps.Item1);
+                var debug = ECEFtoENU_Velocity(v,temps.Item1, temps.Item2);
                 debug.Print();
+                Console.WriteLine(curHeight);
                 if (curHeight < 0)
                 {
                     curHeight = 0;
                     //ECI back to ECEF
                     var EcefPos = Matrix.RotationZ(Math.Tau * t / secondsPerRotation) *curPos;//anticlockwise to fix
-                    yield return ECEFVectorToGeoditicAndHeightNewtonRaphson( EcefPos).Item1;
+                    yield return ECEFVectorToGeoditicAndHeightZhu( EcefPos).Item1;
                     yield break;
                 }
                 //var temp = ECEFVectorToGeoditicAndHeightNewtonRaphson(curPos);
