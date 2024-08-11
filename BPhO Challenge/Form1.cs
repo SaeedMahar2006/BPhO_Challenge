@@ -111,5 +111,12 @@ namespace BPhO_Challenge
             c1.taskNineSetup();
             AddControlToNewTab(c1, true);
         }
+
+        private void button10_Click(object sender, EventArgs e)
+        {
+            var c1 = new SimplePlot();
+            c1.extSetup();
+            AddControlToNewTab(c1, true);
+        }
     }
 }

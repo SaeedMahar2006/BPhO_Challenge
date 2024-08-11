@@ -1,26 +1,56 @@
 ﻿using CoordinateSharp;
 using ScottPlot;
 using System.ComponentModel.Design;
+using System.Data;
+using Newtonsoft.Json;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Core
 {
-
+    /// <summary>
+    /// Implementation of core logic for trajectory calculations 
+    /// </summary>
     public static class SimpleFormulae
     {
-        //
+        
         private static double RadToDeg = 180/Math.PI;
+        /// <summary>
+        /// sin in degrees
+        /// </summary>
         public static Func<double, double> sin = x=>Math.Sin(x/RadToDeg);
+        /// <summary>
+        /// degrees
+        /// </summary>
         public static Func<double, double> cos = x=>Math.Cos(x/RadToDeg);
+        /// <summary>
+        /// degrees
+        /// </summary>
         public static Func<double, double> tan = x=>Math.Tan(x / RadToDeg);
+        /// <summary>
+        /// degrees
+        /// </summary>
         public static Func<double, double> atan = x=>Math.Atan(x)*RadToDeg;
+        /// <summary>
+        /// degrees
+        /// </summary>
         public static Func<double, double> asin = x=>Math.Asin(x)*RadToDeg;
+        /// <summary>
+        /// degrees
+        /// </summary>
         public static Func<double, double> acos = x=>Math.Acos(x)*RadToDeg;
+        /// <summary>
+        /// degrees
+        /// </summary>
         public static Func<double,double, double> atan2 = (x,y)=>Math.Atan2(x,y)*RadToDeg;
         public static Func<double,double> sqrt = Math.Sqrt;
         public static Func<double,double> cbrt = Math.Cbrt;
         public static Func<double,int> sign = Math.Sign;
         public static Func<double,double> sqr = x=>x*x;
         public static Func<double,double> cube = x=>x*x*x;
+
+        /// <summary>
+        /// Prime vertical radius of curvature N(phi) for WGS84
+        /// </summary>
         public static Func<double,double> PrimeVerticalRadCurvature = phi=>WGS84_a/sqrt(1-WGS84_e2 * sqr(sin(phi)));
 
 
@@ -29,24 +59,73 @@ namespace Core
         public const double ConstantPressureSpecificHeatEarth =1004.68506;
         //public const double ConstantPressureSpecificHeat =1004.68506;
         public const double SeaLevelStandTempEarth = 288.16;
+        /// <summary>
+        /// Molar mass of dry air SI units
+        /// </summary>
         public const double MolarMassDryAirEarth = 0.02896968;
+        /// <summary>
+        /// Universal gas constant
+        /// </summary>
         public const double UnivGasConst = 8.314462618;
 
+        /// <summary>
+        /// Atmospheric data according to https://en.wikipedia.org/wiki/Barometric_formula
+        /// </summary>
+        public static DataTable AtmosphericParameters= new DataTable
+        {
+            Columns = { { "b", typeof(int) }, { "height", typeof(double) }, { "density", typeof(double) }, { "stdTemp", typeof(double) }, { "lapse", typeof(double) } },
+            Rows = {
+            {0,00000,1.2250,288.15,0.0065 },
+            {1,11000,0.36391,216.65 ,0 },
+            {2,20000,0.08803,216.65 ,-0.001   },
+            {3,32000,0.01322,228.65 ,-0.0028   },
+            {4,47000,0.00143,270.65 ,0 },
+            {5,51000,0.00086,270.65 ,0.0028   },
+            {6,71000,0.000064,214.65 ,0.002   }
+            }
+        };
+
+        /// <summary>
+        /// Radius of earth in meters
+        /// </summary>
         public const double radiusEarth = 6371000;
+        /// <summary>
+        /// Mass of Earth in kg
+        /// </summary>
         public const double massEarth = 5.972e24;
+        /// <summary>
+        /// Big G constant, SI units
+        /// </summary>
         public const double gravConstant = 6.6743e-11;
+        /// <summary>
+        /// Seconds for one earth rotation fixed frame of reference to earth
+        /// </summary>
         public const double secondsPerRotation = 23*60*60+56*60+4.09;
+        /// <summary>
+        /// WGS84 a parameter (meters)
+        /// </summary>
         public const double WGS84_a = 6378137;
+        /// <summary>
+        /// WGS84 b parameter (meters)
+        /// </summary>
         public const double WGS84_b = 6356752.3142;
 
+        /// <summary>
+        /// WGS84 first eccentricity squared
+        /// </summary>
         public const double WGS84_e2 = 1-WGS84_b*WGS84_b/(WGS84_a*WGS84_a);
+        /// <summary>
+        /// WGS84 second eccentricity squared
+        /// </summary>
         public const double WGS84_ecompliment2 = WGS84_a*WGS84_a/(WGS84_b*WGS84_b)-1;
-
+        /// <summary>
+        /// WGS84 f parameter
+        /// </summary>
         public const double WGS84_f = 1-WGS84_a/(WGS84_b);
 
 
         /// <summary>
-        /// 
+        /// Fixed time increment simulation with no drag
         /// </summary>
         /// <param name="Angle">Launch angle above the horizontal in radians</param>
         /// <param name="Gravity">Gravitational strength constant</param>
@@ -81,11 +160,27 @@ namespace Core
             yield break;
         }
 
-
+        /// <summary>
+        /// Height above ground at horizontal distance x of projectile with no drag
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="Angle"></param>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static double AnalyticNoDragHeight(double x, double Angle, double Gravity, double LaunchSpeed, double LaunchHeight)
         {
             return LaunchHeight + x * Math.Tan(Angle) - (Gravity) * (1 + Math.Pow(Math.Tan(Angle), 2)) * x * x / (2 * LaunchSpeed * LaunchSpeed);
         }
+        /// <summary>
+        /// horizontal range of projectile with specified launch parameters without drag
+        /// </summary>
+        /// <param name="Angle"></param>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static double AnalyticNoDragRange(double Angle, double Gravity, double LaunchSpeed, double LaunchHeight)
         {
             if (LaunchSpeed == 0) return 0; //fix up NaN from appearing
@@ -95,6 +190,14 @@ namespace Core
 
                 ) / Gravity;
         }
+        /// <summary>
+        /// Flight time of trajectory without drag
+        /// </summary>
+        /// <param name="Angle"></param>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static double AnalyticNoDragFlightTime(double Angle, double Gravity, double LaunchSpeed, double LaunchHeight)
         {
             if (LaunchSpeed == 0) return 0; //fix up NaN from appearing
@@ -104,6 +207,15 @@ namespace Core
 
                 ) / Gravity; ;
         }
+
+        /// <summary>
+        /// Appogee of trajectory without drag
+        /// </summary>
+        /// <param name="Angle"></param>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static Coordinates AnalyticNoDragApogee(double Angle, double Gravity, double LaunchSpeed, double LaunchHeight)
         {
             double x = LaunchSpeed * LaunchSpeed * Math.Sin(Angle) * Math.Cos(Angle) / Gravity;
@@ -112,19 +224,41 @@ namespace Core
         }
 
 
-
+        /// <summary>
+        /// Minimum speed required to hit target
+        /// </summary>
+        /// <param name="Gravity"></param>
+        /// <param name="ThroughX"></param>
+        /// <param name="ThroughY"></param>
+        /// <returns></returns>
         public static double ThroughPointMinSpeed(double Gravity, double ThroughX, double ThroughY)
         {
             return Math.Sqrt(Gravity * (ThroughY + Math.Sqrt(ThroughX * ThroughX + ThroughY * ThroughY)));
         }
 
+        /// <summary>
+        /// Minimum speed trajectory launch angle
+        /// </summary>
+        /// <param name="Gravity"></param>
+        /// <param name="ThroughX"></param>
+        /// <param name="ThroughY"></param>
+        /// <returns></returns>
         public static double ThroughPointMinSpeedAngle(double Gravity, double ThroughX, double ThroughY)
         {
             return Math.Atan((ThroughY + Math.Sqrt(ThroughX * ThroughX + ThroughY * ThroughY)) / ThroughX);
         }
 
 
-
+        /// <summary>
+        /// The low ball to pass through target at specified speed
+        /// Returns NaN if ball can not hit target
+        /// </summary>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="ThroughX"></param>
+        /// <param name="ThroughY"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static double ThroughPointLowBallAngle(double Gravity, double LaunchSpeed, double ThroughX, double ThroughY, double LaunchHeight = 0)
         {
             double a = Gravity * ThroughX * ThroughX / (2 * LaunchSpeed * LaunchSpeed);
@@ -135,7 +269,16 @@ namespace Core
             return Math.Atan((-b - Math.Sqrt(discriminant)) / (2 * a));
         }
 
-
+        /// <summary>
+        /// The high ball to pass through target at specified speed
+        /// Returns NaN if ball can not hit target
+        /// </summary>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="ThroughX"></param>
+        /// <param name="ThroughY"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static double ThroughPointHighBallAngle(double Gravity, double LaunchSpeed, double ThroughX, double ThroughY, double LaunchHeight = 0)
         {
             double a = Gravity * ThroughX * ThroughX / (2 * LaunchSpeed * LaunchSpeed);
@@ -149,20 +292,39 @@ namespace Core
 
 
 
-
+        /// <summary>
+        /// Maximum horizontal range
+        /// </summary>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static double MaxRange(double Gravity, double LaunchSpeed, double LaunchHeight)
         {
             return AnalyticNoDragRange(MaxRangeAngle(Gravity, LaunchSpeed, LaunchHeight), Gravity, LaunchSpeed, LaunchHeight);
         }
 
-
+        /// <summary>
+        /// Angle in radians that give max horizontal range
+        /// </summary>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static double MaxRangeAngle(double Gravity, double LaunchSpeed, double LaunchHeight)
         {
             double alpha = 2 * Gravity * LaunchHeight / (LaunchSpeed * LaunchSpeed);
             return Math.Asin(1 / Math.Sqrt(2 + alpha));
         }
 
-
+        /// <summary>
+        /// Bounding parabola at horizontal range x from launch
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <param name="LaunchHeight"></param>
+        /// <returns></returns>
         public static double BoundingHeightAtDistanceX(double x, double Gravity, double LaunchSpeed, double LaunchHeight)
         {
             double alpha = (LaunchSpeed * LaunchSpeed) / (Gravity);
@@ -171,7 +333,11 @@ namespace Core
 
 
 
-
+        /// <summary>
+        /// https://www.bpho.org.uk/bpho/computational-challenge/BPhO_CompPhys2024_Projectilesa.pdf
+        /// </summary>
+        /// <param name="x"></param>
+        /// <returns></returns>
         private static double IntegralRequiredForLengthOfTrajectory(double x)
         {
 
@@ -186,6 +352,14 @@ namespace Core
             return multiplier * (IntegralRequiredForLengthOfTrajectory(Math.Tan(Angle)) - IntegralRequiredForLengthOfTrajectory(Math.Tan(Angle) - lower));
         }
 
+        /// <summary>
+        /// Distance from (0,0) for projectile at time T seconds
+        /// </summary>
+        /// <param name="t">seconds</param>
+        /// <param name="Angle">launch angle radians</param>
+        /// <param name="Gravity"></param>
+        /// <param name="LaunchSpeed"></param>
+        /// <returns></returns>
         public static double distanceFromOriginAtTimeT(double t, double Angle, double Gravity, double LaunchSpeed)
         {
 
@@ -207,7 +381,17 @@ namespace Core
         }
 
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Angle">launch angle radians</param>
+        /// <param name="Gravity">m/s^2</param>
+        /// <param name="LaunchSpeed">m/s</param>
+        /// <param name="LaunchHeight"></param>
+        /// <param name="CoeffRestitution"></param>
+        /// <param name="TimeIncrement">time step for simulation</param>
+        /// <param name="Bounces">Bounces to simulate</param>
+        /// <returns></returns>
         public static IEnumerable<Coordinates> Bounce( double Angle, double Gravity, double LaunchSpeed, double LaunchHeight, double CoeffRestitution, double TimeIncrement = 0.01, int Bounces=5)
         {
             int bounces = 0;
@@ -242,7 +426,53 @@ namespace Core
         }
 
         /// <summary>
+        /// Todo: allow user import atmospheric data
+        /// </summary>
+        /// <param name="json"></param>
+        public static void LoadAtmosphericDataFromJSON(string json)
+        {
+            AtmosphericParameters = (DataTable)JsonConvert.DeserializeObject(json, (typeof(DataTable)));
+        }
+
+        //Todo
+        public static void RecalculateAtmosphericData()
+        {
+
+        }
+
+
+        /// <summary>
+        /// https://en.wikipedia.org/wiki/Barometric_formula
+        /// </summary>
+        /// <param name="altitude"></param>
+        /// <returns></returns>
+        public static double LapseRate(double altitude)
+        {
+            switch (altitude)
+            {
+                case <11000:
+                    return 0.0065;
+                case < 20000:
+                    return 0;
+                case < 32000:
+                    return -0.001;
+                case < 47000:
+                    return -0.0028;
+                case < 51000:
+                    return 0.0;
+                case < 71000:
+                    return 0.0028;
+                case < 85000:
+                    return 0.002;
+                default:
+                    return 0; //atmosphere too thin to bother above this
+            }
+        }
+
+
+        /// <summary>
         /// just see https://en.wikipedia.org/wiki/Atmospheric_pressure
+        /// https://en.wikipedia.org/wiki/Barometric_formula
         /// </summary>
         /// <param name="Altitude"></param>
         /// <param name="SeaLevelPressure"></param>
@@ -254,6 +484,10 @@ namespace Core
         /// <param name="UniversalGasConst"></param>
         /// <returns></returns>
         public static double DryAirPressureAltitude(double Altitude
+
+
+
+
             ,double SeaLevelPressure = SeaLevelPressureEart
             //,double TempLapseRate=0.00976
             ,double ConstantPressureSpecificHeat = ConstantPressureSpecificHeatEarth
@@ -263,18 +497,111 @@ namespace Core
             ,double UniversalGasConst = UnivGasConst
             )
         {
-            return SeaLevelPressure * Math.Pow((1 - Gravity * Altitude / (ConstantPressureSpecificHeat * SeaLevelTemp)), ConstantPressureSpecificHeat * MolarMassDryAir / UniversalGasConst);
+            //TODO read https://en.wikipedia.org/wiki/Barometric_formula
+            //wrong code
+            //if ((1 - Gravity * Altitude / (ConstantPressureSpecificHeat * SeaLevelTemp)) < 0)
+            //{
+            //    Console.WriteLine("dukmmy");
+            //}
+            //return SeaLevelPressure * Math.Pow((1 - Gravity * Altitude / (ConstantPressureSpecificHeat * SeaLevelTemp)), ConstantPressureSpecificHeat * MolarMassDryAir / UniversalGasConst);
+
+            int b = -1;
+            foreach (DataRow cur in AtmosphericParameters.Rows)
+            {
+                if ((double)cur[1] <= Altitude)
+                {
+                    b++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            double refPressure = (double)AtmosphericParameters.Rows[b][2];
+            double refTemp = (double)AtmosphericParameters.Rows[b][3];
+            double refHeight = (double)AtmosphericParameters.Rows[b][1];
+            double lapseRate = (double)AtmosphericParameters.Rows[b][4];
+            if (lapseRate==0)
+            {
+                return refPressure * Math.Pow(1-lapseRate*(Altitude-refHeight)/(refTemp)
+                    ,Gravity*MolarMassDryAir/(UniversalGasConst*lapseRate)
+                    );
+            }
+            else
+            {
+                return refPressure * Math.Exp(
+                    -Gravity * MolarMassDryAir *(Altitude-refHeight)/ (UniversalGasConst * refTemp)
+                    );
+            }
         }
+
+        /// <summary>
+        /// https://en.wikipedia.org/wiki/Barometric_formula
+        /// Ignore optional paramters, currently dont affect the value
+        /// </summary>
+        /// <param name="Altitude"></param>
+        /// <param name="TempLapseRate"></param>
+        /// <param name="SeaLevelTemp"></param>
+        /// <returns></returns>
         public static double DryAirTempAltitudeSimple(double Altitude
     ,double TempLapseRate=0.00976
     , double SeaLevelTemp = 288.16
 
     )
         {
-            return SeaLevelTemp+Altitude*TempLapseRate;
+            //return SeaLevelTemp+Altitude*TempLapseRate;//TODO minus here
+            double currenttemp = SeaLevelTemp;
+            double lastHeight = 0;
+            if (Altitude >0) {
+                currenttemp=currenttemp+LapseRate(Altitude)*(Altitude-lastHeight);
+            }
+            if (Altitude > 11000)
+            {
+                lastHeight = 11000;
+                currenttemp = currenttemp + LapseRate(Altitude) * (Altitude - lastHeight);
+            }
+            if (Altitude > 20000)
+            {
+                lastHeight = 20000;
+                currenttemp = currenttemp + LapseRate(Altitude) * (Altitude - lastHeight);
+            }
+            if (Altitude > 32000)
+            {
+                lastHeight = 32000;
+                currenttemp = currenttemp + LapseRate(Altitude) * (Altitude - lastHeight);
+            }
+            if (Altitude > 47000)
+            {
+                lastHeight = 47000;
+                currenttemp = currenttemp + LapseRate(Altitude) * (Altitude - lastHeight);
+            }
+            if (Altitude > 51000)
+            {
+                lastHeight = 51000;
+                currenttemp = currenttemp + LapseRate(Altitude) * (Altitude - lastHeight);
+            }
+            if (Altitude > 71000)
+            {
+                lastHeight = 71000;
+                currenttemp = currenttemp + LapseRate(Altitude) * (Altitude - lastHeight);
+            }
+            //if (Altitude > 85000)
+            //{
+            //    lastHeight = 85000;
+            //    currenttemp = currenttemp + LapseRate(Altitude) * (Altitude - lastHeight);
+            //}
+            return currenttemp;
         }
 
         //TODO forward all the constants in the calculations to other func calls
+        /// <summary>
+        /// Density of dry air
+        /// </summary>
+        /// <param name="Altitude">above ellipsoid</param>
+        /// <param name="MolarMassDryAir"></param>
+        /// <param name="GasConstant"></param>
+        /// <returns></returns>
         public static double DryAirDensityAltitude(double Altitude,
             double MolarMassDryAir = MolarMassDryAirEarth,
             double GasConstant = UnivGasConst
@@ -283,11 +610,52 @@ namespace Core
             return DryAirPressureAltitude(Altitude)*MolarMassDryAir/(GasConstant*DryAirTempAltitudeSimple(Altitude));
         }
 
+        /// <summary>
+        /// Redundant
+        /// </summary>
+        /// <param name="height"></param>
+        /// <returns></returns>
+        public static double AirDensityLookupLinearInterpolation(double height)
+        {
+            int b = -1;
+            foreach (DataRow cur in AtmosphericParameters.Rows)
+            {
+                if ((double)cur[1]<=height)
+                {
+                    b++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Force of drag based on altitude (however defined)
+        /// </summary>
+        /// <param name="altitude">metres</param>
+        /// <param name="speed">m/s</param>
+        /// <param name="dragCoeff"></param>
+        /// <param name="crossSectionArea">m^2</param>
+        /// <returns></returns>
         public static double DragForceMagnitude(double altitude, double speed,double dragCoeff, double crossSectionArea)
         {
             return 0.5*DryAirDensityAltitude(altitude)*sqr(speed)*crossSectionArea*dragCoeff;
         }
 
+
+        /// <summary>
+        /// IEnumerable of ScottPlot coordinates representing trajectory from drag with 2D flat earth
+        /// </summary>
+        /// <param name="Angle">radians</param>
+        /// <param name="Gravity">ms^-2</param>
+        /// <param name="LaunchSpeed">ms^-1</param>
+        /// <param name="LaunchHeight">metres above the plane</param>
+        /// <param name="CoeffDrag"></param>
+        /// <param name="TimeIncrement">time increment for simulation</param>
+        /// <returns></returns>
         public static IEnumerable<Coordinates> Drag(double Angle, double Gravity, double LaunchSpeed, double LaunchHeight, double CoeffDrag, double TimeIncrement = 0.01)
         {
             //int bounces = 0;
@@ -324,28 +692,50 @@ namespace Core
 
         }
 
-        public static double AltitudeFromCoordiantesSphere(Vector coord)
-        {
-            return coord.Magnitude() - radiusEarth;
-        }
-        public static double AltitudeFromCoordinatesWGS84(Vector coord)
-        {
-            return ECEFVectorToGeoditicAndHeightZhu(coord).Item2;
-        }
+        //public static double AltitudeFromCoordiantesSphere(Vector coord)
+        //{
+        //    return coord.Magnitude() - radiusEarth;
+        //}
+        //public static double AltitudeFromCoordinatesWGS84(Vector coord)
+        //{
+        //    return ECEFVectorToGeoditicAndHeightZhu(coord).Item2;
+        //}
+
+        /// <summary>
+        /// Acceleration due to gravity from ECEF position. Negative (for direction) handled
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
         public static Vector AccelerationDueToGrav(Vector Position)
         {
             return -1*Position * massEarth * gravConstant / (Math.Pow(Position*Position,1.5));
         }
+        /// <summary>
+        /// ASSUMES SPHERICAL EARTH, todo implement ellipsoid
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
         public static Vector ProjectOntoSurfaceOfEarthVector(Vector Position)
         {
             return radiusEarth * Position / Position.Magnitude();
         }
+
+        /// <summary>
+        /// Use Heikkinen ECEF position to LLA
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
         public static Coordinate ProjectOntoSurfaceOfEarthCoord(Vector Position)
         {
             return ECEFVectorToGeoditicHeikkinen(Position);
         }
        
-
+        /// <summary>
+        /// Geoditic to ECEF postion
+        /// </summary>
+        /// <param name="Geoditic"></param>
+        /// <param name="Height"></param>
+        /// <returns></returns>
         public static Vector GeoditicToECEFVector(Coordinate Geoditic, double Height=0)
         {
             var v= new Vector(3) {};
@@ -357,6 +747,12 @@ namespace Core
             v[2] = ((1-WGS84_e2)*PrimeVerticalRadCurvature(phi) + h) * sin(phi);
             return v;
         }
+
+        /// <summary>
+        /// https://en.wikipedia.org/wiki/Geographic_coordinate_conversion
+        /// </summary>
+        /// <param name="ECEF"></param>
+        /// <returns></returns>
         public static (Coordinate,double) ECEFVectorToGeoditicAndHeightHeikkinen(Vector ECEF)
         {
             //black magic of wikipedia
@@ -386,6 +782,12 @@ namespace Core
             return (new Coordinate(lat, longt),height);
         }
 
+        /// <summary>
+        /// algorithm by Zhu (1993). Turns ECEF position to LLA
+        /// Test passed
+        /// </summary>
+        /// <param name="ECEF"></param>
+        /// <returns></returns>
         public static (Coordinate, double) ECEFVectorToGeoditicAndHeightZhu(Vector ECEF)
         {
             // algorithm by Zhu (1993)
@@ -414,26 +816,40 @@ namespace Core
             double z1 = (1-WGS84_e2)*ECEF[2]/(t-l);//fixx
 
             double lat = atan(z1/ ((1-WGS84_e2)*w1));   //MAYBE atan2
-            double longi =2 * atan((w - ECEF[0]) / ECEF[1]);
-            double h = sign(t-1+l)*sqrt(sqr(w-w1)   + sqr(ECEF[2] -z1));
+            double longi = 2 * atan((w - ECEF[0]) / ECEF[1]);
+            if (ECEF[1]==0)
+            {
+                if (ECEF[0]>=0)//equal zero in case we get a pole, just give it longitude 0
+                {
+                    longi = 0;
+                }
+                else
+                {
+                    longi = -180;
+                }
+            }
+            double h = sign(t-1+l)*sqrt(sqr(w-w1)   + sqr(ECEF[2] -z1)); //what if ECEF 1 is 0
 
             return (new Coordinate(lat,longi),h);
         }
 
 
+        /// <summary>
+        /// Netwon Raphson iteration for ECEF position to geoditic
+        /// Test passed
+        /// </summary>
+        /// <param name="ecef"></param>
+        /// <returns></returns>
         public static (Coordinate, double) ECEFVectorToGeoditicAndHeightNewtonRaphson(Vector ecef) {
 
             double x = ecef[0];
             double y = ecef[1];
             double z = ecef[2];
 
-            //  # --- derived constants
-
             double e = Math.Sqrt(Math.Pow(WGS84_a, 2.0) - Math.Pow(WGS84_b, 2.0)) / WGS84_a;
             double clambda = Math.Atan2(y, x);
             double p = Math.Sqrt(Math.Pow(x, 2.0) + Math.Pow(y, 2));
             double h_old = 0.0;
-            //# first guess with h=0 meters
             double theta = Math.Atan2(z, p * (1.0 - Math.Pow(e, 2.0)));
             double cs = Math.Cos(theta);
             double sn = Math.Sin(theta);
@@ -466,8 +882,9 @@ namespace Core
 
         /// <summary>
         /// credit to https://gist.github.com/govert/1b373696c9a27ff4c72a
+        /// Raw position ECEF
         /// </summary>
-        /// <param name="ENU"></param>
+        /// <param name="ENU">ENU position</param>
         /// <param name="Geoditic"></param>
         /// <returns></returns>
         public static Vector ENUToECEF_Position(Vector ENU, Coordinate Geoditic, double height)
@@ -481,9 +898,9 @@ namespace Core
             double lon0 = Geoditic.Longitude.ToDouble();
             double h0 = height;
 
-            double x = ENU[0];
-            double y = ENU[1];
-            double z = ENU[2];
+            double xEast = ENU[0];
+            double yNorth = ENU[1];
+            double zUp = ENU[2];
 
             var lambda = lat0/RadToDeg;
             var phi = lon0/RadToDeg;
@@ -495,31 +912,35 @@ namespace Core
             var cos_phi = Math.Cos(phi);
             var sin_phi = Math.Sin(phi);
 
+
             double x0 = (h0 + N) * cos_lambda * cos_phi;
             double y0 = (h0 + N) * cos_lambda * sin_phi;
             double z0 = (h0 + (1 - WGS84_e2) * N) * sin_lambda;
 
-            double xd, yd, zd;
-            xd = x - x0;
-            yd = y - y0;
-            zd = z - z0;
+            double xd = -sin_phi * xEast - cos_phi * sin_lambda * yNorth + cos_lambda * cos_phi * zUp;
+            double yd = cos_phi * xEast - sin_lambda * sin_phi * yNorth + cos_lambda * sin_phi * zUp;
+            double zd = cos_lambda * yNorth + sin_lambda * zUp;
+
+            double x = xd + x0;
+            double y = yd + y0;
+            double z = zd + z0;
 
             Vector ret = new Vector(3);
 
             // This is the matrix multiplication
-            ret[0] = -sin_phi * xd + cos_phi * yd;
-            ret[1] = -cos_phi * sin_lambda * xd - sin_lambda * sin_phi * yd + cos_lambda * zd;
-            ret[2] = cos_lambda * cos_phi * xd + cos_lambda * sin_phi * yd + sin_lambda * zd;
+            ret[0] = x;
+            ret[1] = y;
+            ret[2] = z;
 
             return ret;
         }
 
         /// <summary>
-        /// 
+        /// Returns ECEF velocity or direction
         /// </summary>
-        /// <param name="ENU"></param>
+        /// <param name="ENU">ENU direction/velocity</param>
         /// <param name="Geoditic"></param>
-        /// <param name="height"></param>
+        /// <param name="height">Above ellipsoid</param>
         /// <returns></returns>
         public static Vector ENUToECEF_Velocity(Vector ENU, Coordinate Geoditic, double height)
         {//TODO
@@ -530,15 +951,16 @@ namespace Core
 
             var translate = GeoditicToECEFVector(Geoditic, height);
             var ECEF=ENUToECEF_Position(ENU, Geoditic, height);
-            return ECEF;//TODO, what here
+            return ECEF-translate;//TODO, what here
         }
 
         /// <summary>
-        /// 
+        /// Converts to appropriate ENU position(s) and finds difference between them
+        /// Suitable for velocities or directions
         /// </summary>
-        /// <param name="ECEF"></param>
+        /// <param name="ECEF">ECEF velocity or direction</param>
         /// <param name="Geoditic"></param>
-        /// <param name="height"></param>
+        /// <param name="height">above ellipsoid</param>
         /// <returns></returns>
         public static Vector ECEFtoENU_Velocity(Vector ECEF, Coordinate Geoditic, double height)
         {
@@ -606,11 +1028,18 @@ namespace Core
                 Vector ret = new Vector(3);
             // This is the matrix multiplication
             ret[0] = -sin_phi * xd + cos_phi * yd;
-                ret[1] = -cos_phi * sin_lambda * xd - sin_lambda * sin_phi * yd + cos_lambda * zd;
+            ret[1] = -cos_phi * sin_lambda * xd - sin_lambda * sin_phi * yd + cos_lambda * zd;
             ret[2] = cos_lambda * cos_phi * xd + cos_lambda * sin_phi * yd + sin_lambda * zd;
             return ret;
         }
 
+
+        /// <summary>
+        /// Returns ENU vector (velocity/direction)
+        /// </summary>
+        /// <param name="Azimuth">degrees</param>
+        /// <param name="Elevation">degrees</param>
+        /// <returns></returns>
         public static Vector AzimuthElevationtoENU(double Azimuth, double Elevation)
         {
             Vector ENU = new Vector(3);
@@ -620,20 +1049,39 @@ namespace Core
             return ENU;
         }
 
+        /// <summary>
+        /// Converts a IEnumerable of geographic coordinates to a IEnumerable of ScottPlot coordinates.
+        /// </summary>
+        /// <param name="geoCoords">An IEnumerable<Coordinate> object containing the latitude and longitude coordinates to be converted.</param>
+        /// <returns>An IEnumerable Coordinates object containing the corresponding x and y coordinates for each input coordinate.</returns>
+        public static IEnumerable<Coordinates> LatLongToXY(IEnumerable<Coordinate> geoCoords)
+        {
+
+            foreach (Coordinate coord in geoCoords)
+            {
+                var lat = coord.Latitude.ToDouble();
+                var lng = coord.Longitude.ToDouble();
+                var screenX = ((lng)); //+ 180)); //* (mapWidth / 360));
+                var screenY = (((lat))); //+ 90)); // * (mapHeight / 180));//-1
+
+                yield return new Coordinates(screenX, screenY);
+            }
+        }
+
 
         /// <summary>
-        /// Angles in degrees
+        /// IEnumerable of lat, long coordiantes and height of projectile if projected down onto surface of the earth (normal to WGS 84 ellipsoid).
         /// </summary>
         /// <param name="Start"></param>
-        /// <param name="Azimuth"></param>
-        /// <param name="AngleElevation"></param>
-        /// <param name="LaunchSpeed"></param>
-        /// <param name="LaunchHeight"></param>
+        /// <param name="Azimuth">Degrees from North</param>
+        /// <param name="AngleElevation">Degrees</param>
+        /// <param name="LaunchSpeed">m/s</param>
+        /// <param name="LaunchHeight">metres above ellipsoid</param>
         /// <param name="CoeffDrag"></param>
-        /// <param name="TimeIncrement"></param>
+        /// <param name="TimeIncrement">Time increment for simulation time steps</param>
         /// <returns></returns>
 
-        public static IEnumerable<Coordinate> EarthSpinProjectile(Coordinate Start, double Azimuth, double AngleElevation, double LaunchSpeed, double LaunchHeight, double CoeffDrag, double CrossSectionArea, double TimeIncrement = 0.01)
+        public static IEnumerable<(Coordinate,double)> EarthSpinProjectile(Coordinate Start, double Azimuth, double AngleElevation, double LaunchSpeed, double LaunchHeight, double CoeffDrag, double CrossSectionArea, double TimeIncrement = 0.01)
         {
             Vector ENU_VelStart_Unit = AzimuthElevationtoENU(Azimuth,AngleElevation);
             ENU_VelStart_Unit /= ENU_VelStart_Unit.Magnitude(); //normalised
@@ -657,7 +1105,7 @@ namespace Core
             curPos = GeoditicToECEFVector(Start, LaunchHeight);
             v = ECI_Start_Velocity;
             double t = 0;
-            yield return Start;
+            yield return (Start,LaunchHeight);
             double curHeight = ECEFVectorToGeoditicAndHeightZhu(curPos).Item2;
 
             var earthRotationMatrix = Matrix.RotationZ(-Math.Tau*TimeIncrement/secondsPerRotation);//needs be clockwise around z
@@ -669,13 +1117,13 @@ namespace Core
                 
                 a =  tempsss+temposss;
 
-                var posDebug = ECEFVectorToGeoditicAndHeightZhu(curPos);
+                //var posDebug = ECEFVectorToGeoditicAndHeightZhu(curPos);
 
-                var dbg1 = ECEFtoENU_Velocity(tempsss, posDebug.Item1, posDebug.Item2);
-                var dbg2 = ECEFtoENU_Velocity(temposss, posDebug.Item1,posDebug.Item2);
+                //var dbg1 = ECEFtoENU_Velocity(tempsss, posDebug.Item1, posDebug.Item2);
+                //var dbg2 = ECEFtoENU_Velocity(temposss, posDebug.Item1,posDebug.Item2);
 
-                var velDebug = ECEFtoENU_Velocity(v,posDebug.Item1, posDebug.Item2);
-                var accDebug = ECEFtoENU_Velocity(a,posDebug.Item1, posDebug.Item2);
+                //var velDebug = ECEFtoENU_Velocity(v,posDebug.Item1, posDebug.Item2);
+                //var accDebug = ECEFtoENU_Velocity(a,posDebug.Item1, posDebug.Item2);
 
                 curPos = curPos + v * TimeIncrement + 0.5 * (a) * TimeIncrement * TimeIncrement;
                 //lets work in ENU
@@ -685,7 +1133,7 @@ namespace Core
 
 
                 v = v + (a) * TimeIncrement;
-                velDebug = ECEFtoENU_Velocity(v, posDebug.Item1, posDebug.Item2);
+                //velDebug = ECEFtoENU_Velocity(v, posDebug.Item1, posDebug.Item2);
 
                 var tempss = ECEFVectorToGeoditicAndHeightZhu(curPos); //become neg here
                 curPos = earthRotationMatrix*curPos;
@@ -694,6 +1142,7 @@ namespace Core
                 t += TimeIncrement;
 
                 var temps = ECEFVectorToGeoditicAndHeightZhu(curPos);
+                var temps2 = ECEFVectorToGeoditicAndHeightZhu(Matrix.RotationZ(Math.Tau * t / secondsPerRotation) * curPos);
                 curHeight = temps.Item2;
 
                 var debug = ECEFtoENU_Velocity(v,temps.Item1, temps.Item2);
@@ -704,13 +1153,16 @@ namespace Core
                     curHeight = 0;
                     //ECI back to ECEF
                     var EcefPos = Matrix.RotationZ(Math.Tau * t / secondsPerRotation) *curPos;//anticlockwise to fix
-                    yield return ECEFVectorToGeoditicAndHeightZhu( EcefPos).Item1;
+                    yield return ECEFVectorToGeoditicAndHeightZhu( EcefPos);
                     yield break;
                 }
                 //var temp = ECEFVectorToGeoditicAndHeightNewtonRaphson(curPos);
-                yield return temps.Item1;
+                yield return temps2;
                 
             }
+
+
+
         }
     }
 

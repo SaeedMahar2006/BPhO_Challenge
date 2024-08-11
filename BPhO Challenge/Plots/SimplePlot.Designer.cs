@@ -32,6 +32,7 @@
             selectorList1 = new Controls.SelectorList();
             CloseB = new Button();
             outputTableControl1 = new Controls.OutputTableControl();
+            extPlotterWorker = new System.ComponentModel.BackgroundWorker();
             SuspendLayout();
             // 
             // formsPlot
@@ -70,6 +71,10 @@
             outputTableControl1.TabIndex = 3;
             outputTableControl1.Load += outputTableControl1_Load;
             // 
+            // plotterWorker
+            // 
+            extPlotterWorker.DoWork += extPlotterWorker_DoWork;
+            // 
             // SimplePlot
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -90,5 +95,6 @@
         private Controls.SelectorList selectorList1;
         private Button CloseB;
         private Controls.OutputTableControl outputTableControl1;
+        private System.ComponentModel.BackgroundWorker extPlotterWorker;
     }
 }
