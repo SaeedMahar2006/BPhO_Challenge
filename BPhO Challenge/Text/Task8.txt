@@ -1,0 +1,5 @@
+﻿Uses small discrete timesteps and verlet integration to simulate a projectile bouncing.
+
+At each step if the height above ground is 0, it is set to 0 and the vertical velocity component is negated.
+The vertical velocity component is also multiplied by the Constant of Restitution.
+The simulation only lasts for a specified number of bounces.

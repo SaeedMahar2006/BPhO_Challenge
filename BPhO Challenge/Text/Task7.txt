@@ -1,0 +1,5 @@
+Plots the distance of the projectile from the launch point (0,0).
+
+For high values of the launch angle, the graph can have a local minimum and maximum.
+Try use the value pi/2 for the angle and zoom in on the cusp of the graph.
+In this simulation the numerical instability around the singularity is really obvious.

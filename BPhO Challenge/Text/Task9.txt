@@ -1,0 +1,5 @@
+﻿Displays the difference between a projection without drag and one with drag.
+
+The drag is modelled to be simple directly proportional to the square of the velocity.
+Verlet intergration is used at every simulation step specified by time increment parameter.
+This simulation does not account for thining air density for higher altitudes.

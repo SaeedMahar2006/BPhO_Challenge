@@ -1,0 +1,4 @@
+﻿A simple trajectory simulation based on assuming constant acceleration between time steps.
+Verlet integration is used, so energy is preserved.
+
+Assumes no drag and constant acceleration.

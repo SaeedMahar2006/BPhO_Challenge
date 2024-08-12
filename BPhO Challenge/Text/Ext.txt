@@ -1,0 +1,14 @@
+﻿This is the extension task that asks to calculate trajectory on a spherical planet.
+
+Enter the launch parameters. The Azimuth is the bearing from north (in the local tangent plane) and the Elevation is the angle of projection above this plane.
+
+The model uses the WGS84 ellipsoid internally. The calculations are performed by first translating the Lat-Longitude-Altitide coordinates to an Earth Centre Earth Fixed(ECEF) coordiante system.
+The rotation of the earth is accounted by 2 steps, first by finding this ECEF velocity of the surface when projected and adding this to the initial velocity.
+And secondly by using a rotation matrix to rotate both the current position vector and current velocity vector by an appropriate amount with respect to the time increment.
+At each stage of the simulation simple verlet integration is used.
+Altitude and the point on the ground projection of the projectile is calculated using the Heikkinen ECEF to LLA algorithm.
+The altitude is then used to calculate the appropriate air density based on the Barometric Formula and Earth's atmospheric data, and then used to determine both the acceleration due to gravity and drag.
+
+The result is displayed using an equirectangular projection.
+
+Note, small time increments or large velocity may result in longer computation time - be patient!

@@ -1,0 +1,3 @@
+﻿Plots the distance that the projectile has travelled (length of the parabolic arc).
+
+This calculation can be solved algebraically by using the analytic formula for the trajectory and integration.

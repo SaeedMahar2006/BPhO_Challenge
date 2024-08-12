@@ -1,0 +1,4 @@
+This plots the low and high ball for hitting a point at a specified speed.
+
+Also plots the minimum speed trajectory required to hit the target.
+If the launch speed is below the minimum required speed the high and low ball trajectories are not plotted.

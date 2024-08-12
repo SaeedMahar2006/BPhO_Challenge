@@ -1,0 +1,3 @@
+Calculates and displays the maximum horizontal range trajectory.
+
+This is calculated by differentiating the formula for range and finding the maximum.

@@ -1,0 +1,3 @@
+﻿Welcome to my BPhO 2024 entry!
+
+Use the buttons on the left to navigate between each task. You can close each tab that opens up by pressing the cross in top right corner, if it is not visible try full screen the application.

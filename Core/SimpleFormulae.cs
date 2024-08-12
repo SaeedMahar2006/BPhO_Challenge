@@ -124,6 +124,21 @@ namespace Core
         public const double WGS84_f = 1-WGS84_a/(WGS84_b);
 
 
+
+
+        //public static IEnumerable<(int, double, int)> ExtractMinimaMaxima(List<double> values)
+        //{
+        //    if (values.Count < 3) yield break;
+        //    for (int i = 1; i < values.Count - 1; i++)
+        //    {
+        //        if (isPeak(values[i - 1], values[i], values[i + 1])) yield return (1, values[i], i);
+        //        else if (isThrough(values[i - 1], values[i], values[i + 1])) yield return (-1, values[i], i);
+        //        else yield return (0, values[i], i);
+        //    }
+        //}
+
+
+
         /// <summary>
         /// Fixed time increment simulation with no drag
         /// </summary>
@@ -206,6 +221,38 @@ namespace Core
                 Math.Sqrt(Math.Pow(Math.Sin(Angle), 2) + 2 * Gravity * LaunchHeight / (LaunchSpeed * LaunchSpeed))//possibility of NaN
 
                 ) / Gravity; ;
+        }
+
+        /// <summary>
+        /// time stamps at regular intervals for duration of flight without drag
+        /// </summary>
+        /// <returns></returns>
+        public static IEnumerable<double> TimeSamplesFromFlight(double Angle, double Gravity, double LaunchSpeed, double LaunchHeight,double TimeIncrement)
+        {
+            double t = 0;
+            double ft = AnalyticNoDragFlightTime(Angle, Gravity, LaunchSpeed, LaunchHeight);
+            while (t<ft)
+            {
+                yield return t;
+                t += TimeIncrement;
+            }yield return t;
+        }
+
+        /// <summary>
+        /// distance stamps at regular intervals for duration of flight without drag
+        /// </summary>
+        /// <returns></returns>
+        public static IEnumerable<double> DistanceSamplesFromFlight(double Angle, double Gravity, double LaunchSpeed, double LaunchHeight, double TimeIncrement)
+        {
+            double t = 0;
+            double uc=Math.Cos(Angle)*LaunchSpeed;
+            double ft = AnalyticNoDragFlightTime(Angle, Gravity, LaunchSpeed, LaunchHeight);
+            while (t < ft)
+            {
+                yield return t*uc;
+                t += TimeIncrement;
+            }
+            yield return t;
         }
 
         /// <summary>
@@ -370,14 +417,19 @@ namespace Core
                 );
         }
 
-        public static double timeMaxDistanceFromOrigin(double t, double Angle, double Gravity, double LaunchSpeed)
+        public static double timeMaxDistanceFromOrigin(double Angle, double Gravity, double LaunchSpeed)
         {
-            return 3 * LaunchSpeed / (2 * Gravity) * Math.Sin(Angle) - LaunchSpeed / Gravity * Math.Sqrt(9 / 4 * Math.Pow(Math.Sin(Angle), 2) - 2);
+            var s= Math.Sin(Angle);
+            return (s+sqrt(s*s-8.0/9))*1.5 * LaunchSpeed / Gravity;
+            //return 3 * LaunchSpeed / (2 * Gravity) * Math.Sin(Angle) - LaunchSpeed / Gravity * Math.Sqrt(9 / 4 * Math.Pow(Math.Sin(Angle), 2) - 2) ;
         }
 
-        public static double timeMinDistanceFromOrigin(double t, double Angle, double Gravity, double LaunchSpeed)
+        public static double timeMinDistanceFromOrigin( double Angle, double Gravity, double LaunchSpeed)
         {
-            return 3 * LaunchSpeed / (2 * Gravity) * Math.Sin(Angle) + LaunchSpeed / Gravity * Math.Sqrt(9 / 4 * Math.Pow(Math.Sin(Angle), 2) - 2);
+            var s = Math.Sin(Angle);
+            var val= (s - sqrt(s * s - 8.0 / 9)) * 1.5 * LaunchSpeed / Gravity;
+            return val;
+            //return 3 * LaunchSpeed / (2 * Gravity) * Math.Sin(Angle) + LaunchSpeed / Gravity * Math.Sqrt(9 / 4 * Math.Pow(Math.Sin(Angle), 2) - 2);
         }
 
 
@@ -517,7 +569,9 @@ namespace Core
                     break;
                 }
             }
-
+            if (b == -1) {
+                return double.NaN;
+            }
             double refPressure = (double)AtmosphericParameters.Rows[b][2];
             double refTemp = (double)AtmosphericParameters.Rows[b][3];
             double refHeight = (double)AtmosphericParameters.Rows[b][1];
@@ -591,6 +645,10 @@ namespace Core
             //    lastHeight = 85000;
             //    currenttemp = currenttemp + LapseRate(Altitude) * (Altitude - lastHeight);
             //}
+            if (currenttemp<=0)
+            {
+                currenttemp = 0.01;//Something close to 0
+            }
             return currenttemp;
         }
 
@@ -656,7 +714,7 @@ namespace Core
         /// <param name="CoeffDrag"></param>
         /// <param name="TimeIncrement">time increment for simulation</param>
         /// <returns></returns>
-        public static IEnumerable<Coordinates> Drag(double Angle, double Gravity, double LaunchSpeed, double LaunchHeight, double CoeffDrag, double TimeIncrement = 0.01)
+        public static IEnumerable<Coordinates> Drag(double Angle, double Gravity, double LaunchSpeed, double LaunchHeight, double CoeffDrag, double TimeIncrement = 0.01, bool ClampNegativeHeight=false)
         {
             //int bounces = 0;
             Vector a = new Vector(2);
@@ -671,7 +729,9 @@ namespace Core
             curPos[1] = LaunchHeight;
             double t = 0;
             yield return curPos;
-            while (curPos[1]>0)
+            //bool fl
+            
+            while (curPos[1]>0 )
             {
                 
                 a[0] = -v[0]*CoeffDrag*v.Magnitude();
@@ -683,7 +743,8 @@ namespace Core
                 t += TimeIncrement;
                 if (curPos[1] < 0)
                 {
-                    curPos[1] = 0;
+
+                    if(ClampNegativeHeight)curPos[1] = 0;
                     yield return curPos;
                     yield break;
                 }
@@ -1050,27 +1111,39 @@ namespace Core
         }
 
         /// <summary>
-        /// Converts a IEnumerable of geographic coordinates to a IEnumerable of ScottPlot coordinates.
+        /// Converts a IEnumerable of geographic coordinates to a IEnumerable of ScottPlot (coordinates, coordinates).
+        /// First item in tuple is geogeditic representatioon of point on the ground below the projectile
+        /// Second item x coordinate is distance travelled (metres) on ground, y coordinate is the altitude
+        /// third item x coordinate is the time (seconds), y coordinate is the altitude
         /// </summary>
         /// <param name="geoCoords">An IEnumerable<Coordinate> object containing the latitude and longitude coordinates to be converted.</param>
         /// <returns>An IEnumerable Coordinates object containing the corresponding x and y coordinates for each input coordinate.</returns>
-        public static IEnumerable<Coordinates> LatLongToXY(IEnumerable<Coordinate> geoCoords)
+        public static IEnumerable<(Coordinates,Coordinates,Coordinates)> LatLongToLLAandAltitudeAtTimeT(IEnumerable<(Coordinate,double,double)> geoCoords)
         {
-
-            foreach (Coordinate coord in geoCoords)
+            Coordinate? start= null;
+            foreach ((Coordinate, double, double) coordHeight in geoCoords)
             {
+                var coord = coordHeight.Item1;
+                var height = coordHeight.Item2;
+                var t = coordHeight.Item3;
+                if (start==null)
+                {
+                    start = coordHeight.Item1;
+                }
+                var dist = start.Get_Distance_From_Coordinate(coord,Shape.Ellipsoid);
                 var lat = coord.Latitude.ToDouble();
                 var lng = coord.Longitude.ToDouble();
                 var screenX = ((lng)); //+ 180)); //* (mapWidth / 360));
                 var screenY = (((lat))); //+ 90)); // * (mapHeight / 180));//-1
 
-                yield return new Coordinates(screenX, screenY);
+
+                yield return (new Coordinates(screenX, screenY), new Coordinates(dist.Meters,height), new Coordinates(t, height));
             }
         }
 
 
         /// <summary>
-        /// IEnumerable of lat, long coordiantes and height of projectile if projected down onto surface of the earth (normal to WGS 84 ellipsoid).
+        /// IEnumerable of lat, long coordiantes and height of projectile, and time at t seconds if projected down onto surface of the earth (normal to WGS 84 ellipsoid).
         /// </summary>
         /// <param name="Start"></param>
         /// <param name="Azimuth">Degrees from North</param>
@@ -1081,7 +1154,7 @@ namespace Core
         /// <param name="TimeIncrement">Time increment for simulation time steps</param>
         /// <returns></returns>
 
-        public static IEnumerable<(Coordinate,double)> EarthSpinProjectile(Coordinate Start, double Azimuth, double AngleElevation, double LaunchSpeed, double LaunchHeight, double CoeffDrag, double CrossSectionArea, double TimeIncrement = 0.01)
+        public static IEnumerable<(Coordinate,double,double)> EarthSpinProjectile(Coordinate Start, double Azimuth, double AngleElevation, double LaunchSpeed, double LaunchHeight, double CoeffDrag, double CrossSectionArea, double TimeIncrement = 0.01)
         {
             Vector ENU_VelStart_Unit = AzimuthElevationtoENU(Azimuth,AngleElevation);
             ENU_VelStart_Unit /= ENU_VelStart_Unit.Magnitude(); //normalised
@@ -1105,7 +1178,7 @@ namespace Core
             curPos = GeoditicToECEFVector(Start, LaunchHeight);
             v = ECI_Start_Velocity;
             double t = 0;
-            yield return (Start,LaunchHeight);
+            yield return (Start,LaunchHeight,0);
             double curHeight = ECEFVectorToGeoditicAndHeightZhu(curPos).Item2;
 
             var earthRotationMatrix = Matrix.RotationZ(-Math.Tau*TimeIncrement/secondsPerRotation);//needs be clockwise around z
@@ -1153,11 +1226,12 @@ namespace Core
                     curHeight = 0;
                     //ECI back to ECEF
                     var EcefPos = Matrix.RotationZ(Math.Tau * t / secondsPerRotation) *curPos;//anticlockwise to fix
-                    yield return ECEFVectorToGeoditicAndHeightZhu( EcefPos);
+                    var final=ECEFVectorToGeoditicAndHeightZhu(EcefPos);
+                    yield return (final.Item1,final.Item2,t);
                     yield break;
                 }
                 //var temp = ECEFVectorToGeoditicAndHeightNewtonRaphson(curPos);
-                yield return temps2;
+                yield return (temps2.Item1,temps.Item2,t);
                 
             }
 

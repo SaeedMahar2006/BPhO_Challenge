@@ -1,0 +1,3 @@
+﻿A combination of a couple previous graphs, all on one page!
+
+The bounding parabola is also plotted, see what happens as you move the target in and out of the bounding parabola.

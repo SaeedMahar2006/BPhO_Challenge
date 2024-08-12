@@ -72,7 +72,7 @@
             // 
             splitContainer1.Panel2.Controls.Add(tabControl1);
             splitContainer1.Size = new Size(1490, 683);
-            splitContainer1.SplitterDistance = 257;
+            splitContainer1.SplitterDistance = 100;
             splitContainer1.TabIndex = 0;
             // 
             // button10
@@ -183,7 +183,7 @@
             tabControl1.Location = new Point(0, 0);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(1229, 683);
+            tabControl1.Size = new Size(1386, 683);
             tabControl1.TabIndex = 0;
             // 
             // tabPage1
@@ -191,7 +191,7 @@
             tabPage1.Location = new Point(4, 24);
             tabPage1.Name = "tabPage1";
             tabPage1.Padding = new Padding(3);
-            tabPage1.Size = new Size(1221, 655);
+            tabPage1.Size = new Size(1378, 655);
             tabPage1.TabIndex = 0;
             tabPage1.Text = "tabPage1";
             tabPage1.UseVisualStyleBackColor = true;

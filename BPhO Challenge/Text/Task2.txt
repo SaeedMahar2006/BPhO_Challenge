@@ -1,0 +1,3 @@
+﻿A simple analytic trajectory derived from first principles.
+
+Assumes no drag and constant acceleration.
